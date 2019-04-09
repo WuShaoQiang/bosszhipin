@@ -3,11 +3,7 @@ package model
 import (
 	"fmt"
 	"log"
-	"regexp"
 	"strconv"
-	"strings"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 // Job struct
@@ -24,47 +20,6 @@ var (
 	url      = "https://www.zhipin.com%s"
 	keywords = []string{"golang"}
 )
-
-func loadDataToVar(doc *goquery.Document) error {
-	num := doc.Find("ul>li>div.job-primary").Size()
-	jobs := make([]Job, num)
-
-	// Find average salary
-	doc.Find("ul>li>div>div>h3>a>span").Each(func(i int, s *goquery.Selection) {
-		str := s.Text()
-		str = strings.Replace(str, "k", "", -1)
-		strs := strings.Split(str, "-")
-		num1, _ := strconv.Atoi(strs[0])
-		num2, _ := strconv.Atoi(strs[1])
-
-		jobs[i].Salary = (num1 + num2) / 2
-	})
-
-	// Find work experience
-	// Find location(city)
-	doc.Find("ul>li>div>div.info-primary>p").Each(func(i int, s *goquery.Selection) {
-		str := s.Text()
-		reg1 := regexp.MustCompile(`\d-\d+`)
-		work := reg1.FindAllString(str, -1)
-		if len(work) > 1 {
-			log.Println("workExperience too long")
-		} else if len(work) == 1 {
-			jobs[i].Wrok = work[0]
-		} else {
-			jobs[i].Wrok = "经验不限"
-		}
-
-		reg3 := regexp.MustCompile(`[^\w\s\-]+`)
-		temp := reg3.FindAllString(str, -1)
-		location := temp[0]
-		jobs[i].Location = location
-	})
-
-	// Add to allJobs
-	allJobs = append(allJobs, jobs...)
-
-	return nil
-}
 
 // AddJob add one job to database
 func AddJob(salary int, location, work, education string) error {
@@ -116,7 +71,7 @@ func Counter() (nameItems []string, cityCountMap map[string]map[string]int, citi
 	return
 }
 
-func countryMap() map[string]float32 {
+func MapData() map[string]float32 {
 	mapData := make(map[string]float32)
 	for _, job := range allJobs {
 		if _, exist := mapData[job.Location]; !exist {
@@ -141,8 +96,8 @@ func Process() {
 				currentPage = nextPage
 			}
 		}
-		loadDataToMysql()
 
+		loadDataToMysql()
 		// fmt.Println(allJobs)
 		// show(counter())
 

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -31,6 +34,52 @@ func getNextPage(page string) (bool, string) {
 		return true, nextPage
 	}
 	return false, ""
+}
+
+func loadDataToVar(doc *goquery.Document) error {
+	num := doc.Find("ul>li>div.job-primary").Size()
+	jobs := make([]Job, num)
+
+	// Find average salary
+	doc.Find("ul>li>div>div>h3>a>span").Each(func(i int, s *goquery.Selection) {
+		str := s.Text()
+		str = strings.Replace(str, "k", "", -1)
+		strs := strings.Split(str, "-")
+		num1, _ := strconv.Atoi(strs[0])
+		num2, _ := strconv.Atoi(strs[1])
+
+		jobs[i].Salary = (num1 + num2) / 2
+	})
+
+	// Find work experience
+	// Find location(city)
+	// Find education
+	doc.Find("ul>li>div>div.info-primary>p").Each(func(i int, s *goquery.Selection) {
+		str := s.Text()
+		r := []rune(str)
+		reg1 := regexp.MustCompile(`\d-\d+`)
+		work := reg1.FindAllString(str, -1)
+		if len(work) > 1 {
+			log.Println("workExperience too long")
+		} else if len(work) == 1 {
+			jobs[i].Wrok = work[0]
+		} else {
+			jobs[i].Wrok = "经验不限"
+		}
+
+		education := string(r[len(r)-2 : len(r)])
+		jobs[i].Education = education
+
+		reg3 := regexp.MustCompile(`[^\w\s\-]+`)
+		temp := reg3.FindAllString(str, -1)
+		location := temp[0]
+		jobs[i].Location = location
+	})
+
+	// Add to allJobs
+	allJobs = append(allJobs, jobs...)
+
+	return nil
 }
 
 func isExist(nameItems []string, item string) bool {

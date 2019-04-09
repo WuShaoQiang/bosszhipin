@@ -1,6 +1,9 @@
 package main
 
 import (
+	"net/http"
+
+	"github.com/WuShaoQiang/crawler/boss/controller"
 	"github.com/WuShaoQiang/crawler/boss/model"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
@@ -12,7 +15,7 @@ func main() {
 
 	model.Process()
 
-	// controller.Register()
+	controller.Register()
 
-	// http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", nil)
 }

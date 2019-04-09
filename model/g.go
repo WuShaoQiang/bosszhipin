@@ -9,6 +9,10 @@ import (
 
 var db *gorm.DB
 
+func init() {
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
+}
+
 // SetDB func
 func SetDB(database *gorm.DB) {
 	db = database

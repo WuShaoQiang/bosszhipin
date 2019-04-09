@@ -3,7 +3,10 @@ package controller
 import (
 	"log"
 	"net/http"
-	"os"
+
+	"github.com/WuShaoQiang/crawler/boss/model"
+
+	"github.com/WuShaoQiang/crawler/boss/vm"
 
 	"github.com/chenjiandongx/go-echarts/charts"
 )
@@ -51,33 +54,18 @@ func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 }
 
-func orderRouters(chartType string) []charts.RouterOpts {
-	for i := 0; i < len(routers); i++ {
-		if routers[i].name == chartType {
-			routers[i], routers[0] = routers[0], routers[i]
-			break
-		}
-	}
-
-	rs := make([]charts.RouterOpts, 0)
-	for i := 0; i < len(routers); i++ {
-		rs = append(rs, routers[i].RouterOpts)
-	}
-	return rs
+func Register() {
+	http.HandleFunc("/map", mapHandler)
 }
 
 func mapHandler(w http.ResponseWriter, _ *http.Request) {
 	page := charts.NewPage(orderRouters("map")...)
 	page.Add(
-		mapVisualMap(countryMap()),
+		vm.MapVisualMap(model.MapData()),
 	)
-	f, err := os.Create(path + "html/" + "map.html")
-	if err != nil {
-		log.Println(err)
-	}
-	page.Render(w, f)
-}
-
-func Register() {
-	http.HandleFunc("/map", mapHandler)
+	// f, err := os.Create(path + "html/" + "map.html")
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+	page.Render(w)
 }
