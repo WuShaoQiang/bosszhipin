@@ -36,9 +36,49 @@ func getNextPage(page string) (bool, string) {
 	return false, ""
 }
 
+func (job *Job) getDetailPage(page string) {
+	resp, err := http.Get(fmt.Sprintf(url, page))
+	if err != nil {
+		log.Fatalf("Get Error %s\n", err)
+	}
+
+	defer resp.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatalf("go query Error %s\n", err)
+	}
+
+	job.Benefit, job.DetailAddress = getDetailData(doc)
+}
+
+func getDetailData(doc *goquery.Document) (benefit string, detailAddress string) {
+	//Find benefit
+	var single []string
+	doc.Find("div.info-primary>div.tag-container>div.job-tags>span").Each(func(i int, s *goquery.Selection) {
+		// fmt.Println(i, s.Text())
+		single = append(single, s.Text())
+
+	})
+	benefit = strings.Join(single, ",")
+	// fmt.Println(benefit)
+
+	doc.Find("div.job-detail>div.detail-content>div.job-sec>div.job-location>div.location-address").Each(func(i int, s *goquery.Selection) {
+		// fmt.Println(i, s.Text())
+		detailAddress = s.Text()
+	})
+
+	return
+}
+
 func loadDataToVar(doc *goquery.Document) error {
 	num := doc.Find("ul>li>div.job-primary").Size()
 	jobs := make([]Job, num)
+
+	//Find company
+	doc.Find("ul>li>div>div.info-company>div>h3>a").Each(func(i int, s *goquery.Selection) {
+		jobs[i].Company = s.Text()
+	})
 
 	// Find average salary
 	doc.Find("ul>li>div>div>h3>a>span").Each(func(i int, s *goquery.Selection) {
@@ -52,12 +92,14 @@ func loadDataToVar(doc *goquery.Document) error {
 	})
 
 	// Find work experience
-	// Find location(city)
+	// Find city
+	// Find district
+	// Find province
 	// Find education
 	doc.Find("ul>li>div>div.info-primary>p").Each(func(i int, s *goquery.Selection) {
 		str := s.Text()
 		r := []rune(str)
-		fmt.Println(string(r))
+		// fmt.Println(string(r))
 		reg1 := regexp.MustCompile(`\d-\d+`)
 		work := reg1.FindAllString(str, -1)
 		if len(work) > 1 {
@@ -75,12 +117,40 @@ func loadDataToVar(doc *goquery.Document) error {
 		temp := reg3.FindAllString(str, -1)
 		location := temp[0]
 		jobs[i].City = location
+
+		strSplit := strings.Split(str, " ")
+		// fmt.Println(strSplit)
+
+		switch len(strSplit) {
+		case 2:
+			jobs[i].City = strSplit[0]
+		case 3:
+			jobs[i].City = strSplit[0]
+			jobs[i].District = strSplit[1]
+
+		default:
+			log.Println("Something wrong in analysing city and district")
+		}
+
+		if province, exist := provinceMap[jobs[i].City]; !exist {
+			log.Println(jobs[i].City, " doesn't exist in provinceMap")
+			jobs[i].Province = "未知"
+		} else {
+			jobs[i].Province = province
+		}
+
 	})
 
+	//Find detail
 	doc.Find("ul>li>div.job-primary>div>h3>a").Each(func(i int, s *goquery.Selection) {
 		detail := s.Get(0).Attr[0].Val
-		// fmt.Println(i, nextPage)
 		jobs[i].Detail = detail
+		jobs[i].getDetailPage(detail)
+	})
+
+	//Find name
+	doc.Find("ul>li>div.job-primary>div>h3>a>div.job-title").Each(func(i int, s *goquery.Selection) {
+		jobs[i].Name = s.Text()
 	})
 
 	// Add to allJobs
@@ -96,4 +166,22 @@ func isExist(nameItems []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func deleteTable(tableName string) error {
+	return db.DropTableIfExists(tableName).Error
+}
+
+func createJobTable() error {
+	return db.CreateTable(&Job{}).Error
+}
+
+func clearTableData(tableName string) error {
+	if err := deleteTable(tableName); err != nil {
+		return err
+	}
+	if err := createJobTable(); err != nil {
+		return err
+	}
+	return nil
 }
