@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Job struct
 type Job struct {
 	// ID        int
 	Salary    int
@@ -24,7 +25,7 @@ type Job struct {
 
 var (
 	headers  = []string{"Host", "User-Agent", "Accept", "Accept-Language", "Accept-Encoding", "Connection"}
-	keywords = []string{"golang", "python"}
+	keywords = []string{"golang"}
 	path     = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/"
 	allJobs  []Job
 	url      = "https://www.zhipin.com%s"
@@ -47,31 +48,40 @@ func readHeader() {
 }
 
 func main() {
-
-	index_page := "/c101010100/?query=%s&page=1&ka=page-1"
+	indexPage := "/c100010000/?query=%s&page=1&ka=page-1"
 	for index, keyword := range keywords {
-		currentPage := fmt.Sprintf(index_page, keyword)
+		currentPage := fmt.Sprintf(indexPage, keyword)
 		log.Printf("Running on %v\n", index)
 		for {
-			next, next_page := getNextPage(currentPage)
+			next, nextPage := getNextPage(currentPage)
 			if !next {
 				break
 			} else {
-				currentPage = next_page
+				currentPage = nextPage
 			}
 		}
 
-		fmt.Println(allJobs)
-		show(counter())
+		// fmt.Println(allJobs)
+		// show(counter())
 
 	}
 }
 
-func show(nameItems []string, count []int) {
-	// nameItems := []string{"北京"}
+func show(nameItems []string, cityCountMap map[string]map[string]int, cities []string) {
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(charts.TitleOpts{Title: "Golang收入情况"})
-	bar.AddXAxis(nameItems).AddYAxis("北京", count)
+	tmp := bar.AddXAxis(nameItems)
+	for _, city := range cities {
+		tmpArray := make([]int, 0)
+		for _, nameItem := range nameItems {
+			if num, exist := cityCountMap[city][nameItem]; exist {
+				tmpArray = append(tmpArray, num)
+			} else {
+				tmpArray = append(tmpArray, 0)
+			}
+		}
+		tmp.AddYAxis(city, tmpArray)
+	}
 	f, err := os.Create(path + "bar.html")
 	if err != nil {
 		log.Printf("show Error %s\n", err)
@@ -80,7 +90,7 @@ func show(nameItems []string, count []int) {
 }
 
 func getNextPage(page string) (bool, string) {
-	var next_page string
+	var nextPage string
 	resp, err := http.Get(fmt.Sprintf(url, page))
 	if err != nil {
 		log.Fatalf("Get Error %s\n", err)
@@ -101,9 +111,9 @@ func getNextPage(page string) (bool, string) {
 		doc.Find("a[class=next]").Each(func(i int, s *goquery.Selection) {
 
 			// fmt.Println(i, s.Get(i).Attr[0].Val+"&"+s.Get(i).Attr[1].Val)
-			next_page = s.Get(i).Attr[0].Val + "&" + s.Get(i).Attr[1].Val
+			nextPage = s.Get(i).Attr[0].Val + "&" + s.Get(i).Attr[1].Val
 		})
-		return true, next_page
+		return true, nextPage
 	}
 	return false, ""
 }
@@ -161,22 +171,67 @@ func loadData(doc *goquery.Document) error {
 	return nil
 }
 
-func counter() (nameItems []string, count []int) {
-	// count := make([]int, 0)
-	// nameItems := make([]string, 0)
-	countMap := make(map[string]int)
+func counter() (nameItems []string, cityCountMap map[string]map[string]int, cities []string) {
+	cityCountMap = map[string]map[string]int{}
+	countMap := make([]map[string]int, 0)
+	// for index := range countMap {
+	// 	countMap[index] = make(map[string]int)
+	// }
+	// fmt.Println(countMap[2])
+	city2NumMap := map[string]int{}
+	counter := 0
 	for _, single := range allJobs {
-		if _, ok := countMap[strconv.Itoa(single.Salary)]; !ok {
-			countMap[strconv.Itoa(single.Salary)] = 1
-			nameItems = append(nameItems, strconv.Itoa(single.Salary))
-		} else {
-			countMap[strconv.Itoa(single.Salary)]++
-		}
-	}
+		if _, exist := cityCountMap[single.Location]; !exist {
+			cities = append(cities, single.Location)
 
-	for _, single := range nameItems {
-		count = append(count, countMap[single])
+			city2NumMap[single.Location] = counter
+			countMap = append(countMap, map[string]int{})
+			fmt.Println(counter)
+			cityCountMap[single.Location] = countMap[counter]
+			counter++
+		} else {
+			if _, exist := countMap[city2NumMap[single.Location]][strconv.Itoa(single.Salary)]; !exist {
+				countMap[city2NumMap[single.Location]][strconv.Itoa(single.Salary)] = 1
+				if !isExist(nameItems, strconv.Itoa(single.Salary)) {
+					nameItems = append(nameItems, strconv.Itoa(single.Salary))
+				}
+			} else {
+				countMap[city2NumMap[single.Location]][strconv.Itoa(single.Salary)]++
+			}
+		}
+
 	}
 
 	return
+}
+
+func isExist(nameItems []string, item string) bool {
+	for _, single := range nameItems {
+		if single == item {
+			return true
+		}
+	}
+	return false
+}
+
+func countryMap() map[string]float32 {
+	mapData := make(map[string]float32)
+	for _, job := range allJobs {
+		if _, exist := mapData[job.Location]; !exist {
+			mapData[job.Location] = 1
+		} else {
+			mapData[job.Location]++
+		}
+	}
+	return mapData
+}
+
+func mapVisualMap(mapData map[string]float32) *charts.Map {
+	mc := charts.NewMap("china")
+	mc.SetGlobalOptions(
+		charts.TitleOpts{Title: "Map-设置 VisualMap"},
+		charts.VisualMapOpts{Calculable: true},
+	)
+	mc.Add("map", mapData)
+	return mc
 }
