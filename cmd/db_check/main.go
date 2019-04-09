@@ -17,6 +17,8 @@ func main() {
 	db.DropTableIfExists(model.Job{})
 	db.CreateTable(model.Job{})
 
-	// model.AddJob(20, "北京", "3-5", "")
+	job := model.Job{Salary: 20, Province: ""}
+
+	job.AddJob()
 
 }

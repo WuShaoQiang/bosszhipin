@@ -18,7 +18,6 @@ type router struct {
 
 var (
 	path = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/"
-
 	host = "http://127.0.0.1:8080"
 
 	routers = []router{
@@ -54,6 +53,7 @@ func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 }
 
+// Register register all handlers
 func Register() {
 	http.HandleFunc("/map", mapHandler)
 }
@@ -63,9 +63,5 @@ func mapHandler(w http.ResponseWriter, _ *http.Request) {
 	page.Add(
 		vm.MapVisualMap(model.MapData()),
 	)
-	// f, err := os.Create(path + "html/" + "map.html")
-	// if err != nil {
-	// 	log.Println(err)
-	// }
 	page.Render(w)
 }

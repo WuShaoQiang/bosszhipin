@@ -57,6 +57,7 @@ func loadDataToVar(doc *goquery.Document) error {
 	doc.Find("ul>li>div>div.info-primary>p").Each(func(i int, s *goquery.Selection) {
 		str := s.Text()
 		r := []rune(str)
+		fmt.Println(string(r))
 		reg1 := regexp.MustCompile(`\d-\d+`)
 		work := reg1.FindAllString(str, -1)
 		if len(work) > 1 {
@@ -73,7 +74,13 @@ func loadDataToVar(doc *goquery.Document) error {
 		reg3 := regexp.MustCompile(`[^\w\s\-]+`)
 		temp := reg3.FindAllString(str, -1)
 		location := temp[0]
-		jobs[i].Location = location
+		jobs[i].City = location
+	})
+
+	doc.Find("ul>li>div.job-primary>div>h3>a").Each(func(i int, s *goquery.Selection) {
+		detail := s.Get(0).Attr[0].Val
+		// fmt.Println(i, nextPage)
+		jobs[i].Detail = detail
 	})
 
 	// Add to allJobs
