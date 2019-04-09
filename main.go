@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -32,10 +33,11 @@ var (
 
 func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
+	readHeader()
 }
 
 func readHeader() {
-	viper.SetConfigFile("header")
+	viper.SetConfigName("header")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
@@ -64,23 +66,23 @@ func main() {
 		}
 
 		defer resp.Body.Close()
-		// body, err := ioutil.ReadAll(resp.Body)
-		// if err != nil {
-		// 	log.Fatalf("ReadAll Error %s\n", err)
-		// }
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatalf("ReadAll Error %s\n", err)
+		}
 
-		// // fmt.Println(string(body))
-		// file, err := os.Create(path + keyword + ".html")
-		// if err != nil {
-		// 	log.Fatalf("Create File Error %s\n", err)
-		// }
+		// fmt.Println(string(body))
+		file, err := os.Create(path + keyword + ".html")
+		if err != nil {
+			log.Fatalf("Create File Error %s\n", err)
+		}
 
-		// defer file.Close()
+		defer file.Close()
 
-		// _, err = file.Write(body)
-		// if err != nil {
-		// 	log.Fatalf("Write Error %s\n", err)
-		// }
+		_, err = file.Write(body)
+		if err != nil {
+			log.Fatalf("Write Error %s\n", err)
+		}
 
 		doc, err := goquery.NewDocumentFromReader(resp.Body)
 		if err != nil {
