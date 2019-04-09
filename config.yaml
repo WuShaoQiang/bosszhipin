@@ -1,6 +1,0 @@
-mysql:
-  charset: utf8
-  db: crawler
-  host: 127.0.0.1
-  password: 123456
-  user: root
