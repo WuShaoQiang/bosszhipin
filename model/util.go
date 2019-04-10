@@ -12,7 +12,8 @@ import (
 )
 
 // getNextPage return whether it has a next page,and the path of next page.
-func getNextPage(page string) (bool, string) {
+// it also will store jobs in mysql
+func getNextPage(page string, keyword string) (bool, string) {
 	var nextPage string
 	resp, err := http.Get(fmt.Sprintf(url, page))
 	if err != nil {
@@ -26,7 +27,7 @@ func getNextPage(page string) (bool, string) {
 		log.Fatalf("go query Error %s\n", err)
 	}
 
-	loadDataToVar(doc)
+	storeJobs(doc, keyword)
 	if doc.Find("a[class=next]").Size() == 1 {
 		doc.Find("a[class=next]").Each(func(i int, s *goquery.Selection) {
 			nextPage = s.Get(i).Attr[0].Val + "&" + s.Get(i).Attr[1].Val
@@ -36,42 +37,7 @@ func getNextPage(page string) (bool, string) {
 	return false, ""
 }
 
-func (job *Job) getDetailPage(page string) {
-	resp, err := http.Get(fmt.Sprintf(url, page))
-	if err != nil {
-		log.Fatalf("Get Error %s\n", err)
-	}
-
-	defer resp.Body.Close()
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		log.Fatalf("go query Error %s\n", err)
-	}
-
-	job.Benefit, job.DetailAddress = getDetailData(doc)
-}
-
-func getDetailData(doc *goquery.Document) (benefit string, detailAddress string) {
-	//Find benefit
-	var single []string
-	doc.Find("div.info-primary>div.tag-container>div.job-tags>span").Each(func(i int, s *goquery.Selection) {
-		// fmt.Println(i, s.Text())
-		single = append(single, s.Text())
-
-	})
-	benefit = strings.Join(single, ",")
-	// fmt.Println(benefit)
-
-	doc.Find("div.job-detail>div.detail-content>div.job-sec>div.job-location>div.location-address").Each(func(i int, s *goquery.Selection) {
-		// fmt.Println(i, s.Text())
-		detailAddress = s.Text()
-	})
-
-	return
-}
-
-func loadDataToVar(doc *goquery.Document) error {
+func storeJobs(doc *goquery.Document, keyword string) error {
 	num := doc.Find("ul>li>div.job-primary").Size()
 	jobs := make([]Job, num)
 
@@ -99,7 +65,6 @@ func loadDataToVar(doc *goquery.Document) error {
 	doc.Find("ul>li>div>div.info-primary>p").Each(func(i int, s *goquery.Selection) {
 		str := s.Text()
 		r := []rune(str)
-		// fmt.Println(string(r))
 		reg1 := regexp.MustCompile(`\d-\d+`)
 		work := reg1.FindAllString(str, -1)
 		if len(work) > 1 {
@@ -119,7 +84,6 @@ func loadDataToVar(doc *goquery.Document) error {
 		jobs[i].City = location
 
 		strSplit := strings.Split(str, " ")
-		// fmt.Println(strSplit)
 
 		switch len(strSplit) {
 		case 2:
@@ -153,10 +117,51 @@ func loadDataToVar(doc *goquery.Document) error {
 		jobs[i].Name = s.Text()
 	})
 
+	for _, job := range jobs {
+		job.Keyword = keyword
+		if err := job.AddJob(); err != nil {
+			return err
+		}
+	}
+
 	// Add to allJobs
-	allJobs = append(allJobs, jobs...)
+	// allJobs = append(allJobs, jobs...)
 
 	return nil
+}
+
+// getDetailPage is for job's benefit and detailAddress
+func (job *Job) getDetailPage(page string) {
+	resp, err := http.Get(fmt.Sprintf(url, page))
+	if err != nil {
+		log.Fatalf("Get Error %s\n", err)
+	}
+
+	defer resp.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatalf("go query Error %s\n", err)
+	}
+
+	job.Benefit, job.DetailAddress = getDetailData(doc)
+}
+
+// getDatailData return benefit and detailAddress
+func getDetailData(doc *goquery.Document) (benefit string, detailAddress string) {
+	//Find benefit
+	var single []string
+	doc.Find("div.info-primary>div.tag-container>div.job-tags>span").Each(func(i int, s *goquery.Selection) {
+		single = append(single, s.Text())
+
+	})
+	benefit = strings.Join(single, ",")
+
+	doc.Find("div.job-detail>div.detail-content>div.job-sec>div.job-location>div.location-address").Each(func(i int, s *goquery.Selection) {
+		detailAddress = s.Text()
+	})
+
+	return
 }
 
 func isExist(nameItems []string, item string) bool {

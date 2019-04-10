@@ -49,19 +49,38 @@ var (
 	}
 )
 
-func init() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
-}
-
 // Register register all handlers
 func Register() {
 	http.HandleFunc("/map", mapHandler)
+	http.HandleFunc("/bar", barHandler)
 }
 
 func mapHandler(w http.ResponseWriter, _ *http.Request) {
 	page := charts.NewPage(orderRouters("map")...)
 	page.Add(
-		vm.MapVisualMap(model.MapData()),
+		vm.MapVisualMap(model.MapDataProvinceJobNum()),
 	)
 	page.Render(w)
+}
+
+func barHandler(w http.ResponseWriter, r *http.Request) {
+	tpName := "bar.html"
+	if r.Method == http.MethodGet {
+		templates[tpName].Execute(w, nil)
+	}
+	if r.Method == http.MethodPost {
+		var keywords []string
+		r.ParseForm()
+		keyword1 := r.Form.Get("keyword1")
+		keyword2 := r.Form.Get("keyword2")
+		keywords = append(keywords, keyword1, keyword2)
+		log.Println("User post keywords", keywords)
+
+		page := charts.NewPage(orderRouters("bar")...)
+		page.Add(
+			vm.BarCityJobNum(keywords),
+		)
+		page.Render(w)
+	}
+
 }
