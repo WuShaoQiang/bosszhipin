@@ -13,7 +13,7 @@ var (
 // CrawlerGo start crawler and store data in mysql
 // Before crawler start it will detele all old data
 func CrawlerGo(keywords []string) {
-
+	log.Println("Cleaning Database...")
 	if err := clearTableData("job"); err != nil {
 		log.Fatalln("CrawlerGo Error : ", err)
 	}
@@ -32,6 +32,7 @@ func crawlerGoSingleKeyword(keyword string) {
 	for {
 		next, nextPage := getNextPage(currentPage, keyword)
 		if !next {
+			log.Println("The end of ", keyword, " page")
 			break
 		} else {
 			currentPage = nextPage

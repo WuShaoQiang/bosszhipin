@@ -7,7 +7,7 @@ import (
 // Job struct
 type Job struct {
 	ID            int    `gorm:"primary_key"`
-	Keyword       string `gorm:"type:varchar(16)"`
+	Keyword       string `gorm:"type:varchar(32)"`
 	Name          string `gorm:"type:varchar(32)"`
 	Salary        int    `gorm:"type:int(16)"`
 	Company       string `gorm:"type:varchar(64)"`

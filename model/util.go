@@ -15,7 +15,9 @@ import (
 // it also will store jobs in mysql
 func getNextPage(page string, keyword string) (bool, string) {
 	var nextPage string
-	resp, err := http.Get(fmt.Sprintf(url, page))
+	currentURL := fmt.Sprintf(url, page)
+	log.Println("getting page ", currentURL)
+	resp, err := http.Get(currentURL)
 	if err != nil {
 		log.Fatalf("Get Error %s\n", err)
 	}
@@ -28,6 +30,7 @@ func getNextPage(page string, keyword string) (bool, string) {
 	}
 
 	storeJobs(doc, keyword)
+	log.Println("store data to mysql")
 	if doc.Find("a[class=next]").Size() == 1 {
 		doc.Find("a[class=next]").Each(func(i int, s *goquery.Selection) {
 			nextPage = s.Get(i).Attr[0].Val + "&" + s.Get(i).Attr[1].Val
