@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/WuShaoQiang/crawler/boss/model"
-
 	"github.com/WuShaoQiang/crawler/boss/vm"
 
 	"github.com/chenjiandongx/go-echarts/charts"
@@ -51,17 +49,24 @@ var (
 
 // Register register all handlers
 func Register() {
-	http.HandleFunc("/map", mapHandler)
+	// http.HandleFunc("/map", mapHandler)
 	http.HandleFunc("/bar", barHandler)
 }
 
-func mapHandler(w http.ResponseWriter, _ *http.Request) {
-	page := charts.NewPage(orderRouters("map")...)
-	page.Add(
-		vm.MapVisualMap(model.MapDataProvinceJobNum()),
-	)
-	page.Render(w)
-}
+// func mapHandler(w http.ResponseWriter, r *http.Request) {
+// 	tpName := "map.html"
+// 	if r.Method == http.MethodGet {
+// 		templates[tpName].Execute(w, nil)
+// 	}
+// 	if r.Method == http.MethodPost {
+// 		page := charts.NewPage(orderRouters("map")...)
+// 		page.Add(
+// 			vm.MapVisualMap(model.MapDataProvinceJobNum()),
+// 		)
+// 		page.Render(w)
+// 	}
+
+// }
 
 func barHandler(w http.ResponseWriter, r *http.Request) {
 	tpName := "bar.html"
@@ -74,7 +79,7 @@ func barHandler(w http.ResponseWriter, r *http.Request) {
 		keyword1 := r.Form.Get("keyword1")
 		keyword2 := r.Form.Get("keyword2")
 		keywords = append(keywords, keyword1, keyword2)
-		log.Println("User post keywords", keywords)
+		log.Println("User post keywords", keywords, "loading page for user")
 
 		page := charts.NewPage(orderRouters("bar")...)
 		page.Add(

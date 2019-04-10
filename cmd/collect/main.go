@@ -11,8 +11,30 @@ import (
 )
 
 var (
-	keywords = []string{"golang实习"}
+	keywords    = []string{"golang实习"}
+	urlsEncoded []string
 )
+
+func init() {
+	log.SetFlags(log.Llongfile | log.LstdFlags)
+	urlsEncoded = keywordEncode()
+}
+
+func main() {
+	log.Println("DB Init ...")
+	db := model.ConnectToDB()
+	defer db.Close()
+	model.SetDB(db)
+	model.CrawlerGo(keywords, urlsEncoded)
+}
+
+func keywordEncode() (urlsEncoded []string) {
+	urlsEncoded = make([]string, 0)
+	for _, keyword := range keywords {
+		urlsEncoded = append(urlsEncoded, urlEncode(keyword))
+	}
+	return
+}
 
 func urlEncode(keyword string) string {
 	reg := regexp.MustCompile(`[\p{Han}]+`)
@@ -31,23 +53,4 @@ func chineseEncode(chinese string) (encoded string) {
 		encoded = encoded + "%" + fmt.Sprintf("%x", singleByte)
 	}
 	return
-}
-
-func keywordEncode() {
-	for index, keyword := range keywords {
-		keywords[index] = urlEncode(keyword)
-	}
-}
-
-func init() {
-	log.SetFlags(log.Llongfile | log.LstdFlags)
-	keywordEncode()
-}
-
-func main() {
-	log.Println("DB Init ...")
-	db := model.ConnectToDB()
-	defer db.Close()
-	model.SetDB(db)
-	model.CrawlerGo(keywords)
 }

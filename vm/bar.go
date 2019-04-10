@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"log"
-
 	"github.com/WuShaoQiang/crawler/boss/model"
 
 	"github.com/chenjiandongx/go-echarts/charts"
@@ -37,13 +35,10 @@ var (
 // BarCityJobNum return *charts.Bar
 func BarCityJobNum(keywords []string) *charts.Bar {
 	nameItems, count := model.BarDataCityJobNum(keywords)
-	log.Println(nameItems)
-	log.Println(count)
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(charts.TitleOpts{Title: "城市分布"}, charts.ToolboxOpts{Show: true})
 	bar = bar.AddXAxis(nameItems)
 	for index, keyword := range keywords {
-		log.Println("AddYAxis ", keyword)
 		bar.AddYAxis(keyword, count[index])
 	}
 	return bar

@@ -12,22 +12,22 @@ var (
 
 // CrawlerGo start crawler and store data in mysql
 // Before crawler start it will detele all old data
-func CrawlerGo(keywords []string) {
+func CrawlerGo(keywords, urlsEncoded []string) {
 	log.Println("Cleaning Database...")
 	if err := clearTableData("job"); err != nil {
 		log.Fatalln("CrawlerGo Error : ", err)
 	}
-	for _, keyword := range keywords {
+	for index, keyword := range keywords {
 		wg.Add(1)
-		go crawlerGoSingleKeyword(keyword)
+		go crawlerGoSingleKeyword(keyword, urlsEncoded[index])
 	}
 	wg.Wait()
 }
 
-func crawlerGoSingleKeyword(keyword string) {
+func crawlerGoSingleKeyword(keyword, urlEncoded string) {
 	defer wg.Done()
 	indexPage := "/c100010000/?query=%s&page=1&ka=page-1"
-	currentPage := fmt.Sprintf(indexPage, keyword)
+	currentPage := fmt.Sprintf(indexPage, urlEncoded)
 	log.Printf("Collecting on %v\n", keyword)
 	for {
 		next, nextPage := getNextPage(currentPage, keyword)
