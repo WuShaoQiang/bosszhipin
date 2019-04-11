@@ -35,6 +35,16 @@ func (job *Job) AddJob() error {
 	return nil
 }
 
+func clearAllData(tableName string) error {
+	if err := deleteTable(tableName); err != nil {
+		return err
+	}
+	if err := createJobTable(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // func BarData() (nameItems []string, cityCountMap map[string]map[string]int, cities []string) {
 // 	cityCountMap = map[string]map[string]int{}
 // 	countMap := make([]map[string]int, 0)

@@ -1,8 +1,12 @@
 package controller
 
 import (
+	"html/template"
 	"log"
 	"net/http"
+	"strings"
+
+	"github.com/WuShaoQiang/crawler/boss/model"
 
 	"github.com/WuShaoQiang/crawler/boss/vm"
 
@@ -15,8 +19,9 @@ type router struct {
 }
 
 var (
-	path = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/"
-	host = "http://127.0.0.1:8080"
+	path     = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/"
+	host     = "http://127.0.0.1:8080"
+	keywords []string
 
 	routers = []router{
 		{"bar", charts.RouterOpts{URL: host + "/bar", Text: "Bar-(柱状图)"}},
@@ -49,8 +54,45 @@ var (
 
 // Register register all handlers
 func Register() {
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path+"static"))))
+
+	http.HandleFunc("/", indexHandler)
 	// http.HandleFunc("/map", mapHandler)
 	http.HandleFunc("/bar", barHandler)
+}
+
+// StartUp start server
+func StartUp() {
+	http.ListenAndServe(addr, nil)
+}
+
+// func staticHandler() http.Handler {
+// 	dir, err := os.Open("/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/static")
+// 	if err != nil {
+// 		log.Fatalln("staticHandler Open File Error : ", err)
+// 	}
+
+// 	http.FileServer(dir)
+
+// }
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		tmpl, err := template.ParseFiles("templates/contents/index.html")
+		if err != nil {
+			log.Fatalln("templateParseFiles Error:", err)
+		}
+		tmpl.Execute(w, nil)
+	}
+	if r.Method == http.MethodPost {
+		r.ParseForm()
+		keys := r.Form.Get("keywords")
+		refresh := isRefresh(r.Form.Get("refresh"))
+		keywords = strings.Split(keys, ",")
+		log.Println("keywords : ", keywords)
+		model.CrawlerGo(keywords, refresh)
+		http.Redirect(w, r, "/bar", http.StatusSeeOther)
+	}
 }
 
 // func mapHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,23 +111,11 @@ func Register() {
 // }
 
 func barHandler(w http.ResponseWriter, r *http.Request) {
-	tpName := "bar.html"
 	if r.Method == http.MethodGet {
-		templates[tpName].Execute(w, nil)
-	}
-	if r.Method == http.MethodPost {
-		var keywords []string
-		r.ParseForm()
-		keyword1 := r.Form.Get("keyword1")
-		keyword2 := r.Form.Get("keyword2")
-		keywords = append(keywords, keyword1, keyword2)
-		log.Println("User post keywords", keywords, "loading page for user")
-
 		page := charts.NewPage(orderRouters("bar")...)
 		page.Add(
 			vm.BarCityJobNum(keywords),
 		)
 		page.Render(w)
 	}
-
 }

@@ -184,12 +184,29 @@ func createJobTable() error {
 	return db.CreateTable(&Job{}).Error
 }
 
-func clearTableData(tableName string) error {
-	if err := deleteTable(tableName); err != nil {
-		return err
+func keywordEncode(keywords []string) (urlsEncoded []string) {
+	urlsEncoded = make([]string, 0)
+	for _, keyword := range keywords {
+		urlsEncoded = append(urlsEncoded, urlEncode(keyword))
 	}
-	if err := createJobTable(); err != nil {
-		return err
+	return
+}
+
+func urlEncode(keyword string) string {
+	reg := regexp.MustCompile(`[\p{Han}]+`)
+	strs := reg.FindAllString(keyword, -1)
+	chinese := strings.Join(strs, "")
+	encoded := chineseEncode(chinese)
+	encodedURL := reg.ReplaceAllString(keyword, encoded)
+	return encodedURL
+}
+
+func chineseEncode(chinese string) (encoded string) {
+	encoded = ""
+	byteChinese := []byte(chinese)
+	// return fmt.Sprintf("%x")
+	for _, singleByte := range byteChinese {
+		encoded = encoded + "%" + fmt.Sprintf("%x", singleByte)
 	}
-	return nil
+	return
 }

@@ -1,23 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"regexp"
-	"strings"
 
 	"github.com/WuShaoQiang/crawler/boss/model"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var (
-	keywords    = []string{"golang实习"}
-	urlsEncoded []string
+	keywords = []string{"golang实习", "golang"}
 )
 
 func init() {
 	log.SetFlags(log.Llongfile | log.LstdFlags)
-	urlsEncoded = keywordEncode()
 }
 
 func main() {
@@ -25,32 +20,13 @@ func main() {
 	db := model.ConnectToDB()
 	defer db.Close()
 	model.SetDB(db)
-	model.CrawlerGo(keywords, urlsEncoded)
+	model.CrawlerGo(keywords, true)
 }
 
-func keywordEncode() (urlsEncoded []string) {
-	urlsEncoded = make([]string, 0)
-	for _, keyword := range keywords {
-		urlsEncoded = append(urlsEncoded, urlEncode(keyword))
-	}
-	return
-}
+// func deleteByKeyword(keyword string) {
+// 	log.Println("deleting ", keyword, " in database")
+// 	if err := db.Delete(&Job{}, "keyword = ?", keyword); err != nil {
+// 		log.Fatalln("deleteByKeyword Error : ", err)
+// 	}
 
-func urlEncode(keyword string) string {
-	reg := regexp.MustCompile(`[\p{Han}]+`)
-	strs := reg.FindAllString(keyword, -1)
-	chinese := strings.Join(strs, "")
-	encoded := chineseEncode(chinese)
-	encodedURL := reg.ReplaceAllString(keyword, encoded)
-	return encodedURL
-}
-
-func chineseEncode(chinese string) (encoded string) {
-	encoded = ""
-	byteChinese := []byte(chinese)
-	// return fmt.Sprintf("%x")
-	for _, singleByte := range byteChinese {
-		encoded = encoded + "%" + fmt.Sprintf("%x", singleByte)
-	}
-	return
-}
+// }
