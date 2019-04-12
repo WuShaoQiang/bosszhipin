@@ -2,3 +2,4 @@ config.yaml
 *.html
 html/
 bar/
+*.log

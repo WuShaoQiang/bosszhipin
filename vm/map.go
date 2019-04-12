@@ -2,6 +2,7 @@ package vm
 
 import "github.com/chenjiandongx/go-echarts/charts"
 
+//MapVisualMap return *charts.Map
 func MapVisualMap(mapData map[string]float32) *charts.Map {
 	mc := charts.NewMap("china")
 	mc.SetGlobalOptions(

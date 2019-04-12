@@ -1,16 +1,33 @@
 package model
 
 import (
-	"log"
-
 	"github.com/WuShaoQiang/crawler/boss/config"
 	"github.com/jinzhu/gorm"
+	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
-var db *gorm.DB
+var (
+	db       *gorm.DB
+	logger   = log.New()
+	basePath = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss"
+)
 
 func init() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
+	setLogger()
+}
+
+func setLogger() {
+	pathMap := lfshook.PathMap{
+		logrus.DebugLevel: basePath + "debug.log",
+		logrus.InfoLevel:  basePath + "info.log",
+		logrus.WarnLevel:  basePath + "warn.log",
+	}
+	logger.Hooks.Add(lfshook.NewHook(
+		pathMap,
+		&logrus.JSONFormatter{},
+	))
 }
 
 // SetDB func

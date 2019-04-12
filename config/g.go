@@ -18,7 +18,7 @@ func readConfig() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatalf("readHeader Error %s\n", err)
+		log.Printf("readHeader Error %s\n", err)
 	}
 }
 
@@ -29,6 +29,6 @@ func GetMysqlConnectingString() string {
 	host := viper.GetString("mysql.host")
 	db := viper.GetString("mysql.db")
 	charset := viper.GetString("mysql.charset")
-	
+
 	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=%s&parseTime=true", usr, pwd, host, db, charset)
 }

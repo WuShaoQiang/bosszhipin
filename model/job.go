@@ -1,9 +1,5 @@
 package model
 
-import (
-	"log"
-)
-
 // Job struct
 type Job struct {
 	ID            int    `gorm:"primary_key"`
@@ -23,14 +19,13 @@ type Job struct {
 
 var (
 	// allJobs     []Job
-	url = "https://www.zhipin.com%s"
+	indexURL = "https://www.zhipin.com%s"
 )
 
 // AddJob add one job to database
 func (job *Job) AddJob() error {
 	if err := db.Create(&job).Error; err != nil {
-		log.Println("AddJob Error ", err)
-		return err
+		logger.Debugln("AddJob Error ", err)
 	}
 	return nil
 }
@@ -89,7 +84,7 @@ func BarDataCityJobNum(keywords []string) (nameItems []string, count [][]int) {
 		for city := range provinceMap {
 			err := db.Model(&Job{}).Where("city = ?", city).Where("keyword = ?", keyword).Count(&num).Error
 			if err != nil {
-				log.Fatalf("BarDataCityJobNum Error : %s\n", err)
+				logger.Debugln("BarDataCityJobNum Error : ", err)
 			} else {
 				if num != 0 {
 					cityNumMap[index][city] = num
@@ -120,7 +115,7 @@ func MapDataProvinceJobNum() map[string]float32 {
 	for city, province := range provinceMap {
 		err := db.Model(&Job{}).Where("city = ?", city).Count(&num).Error
 		if err != nil {
-			log.Fatalf("MapData Error : %s\n", err)
+			logger.Debugln("MapData Error : ", err)
 		} else {
 			if _, exist := mapData[province]; !exist {
 				mapData[province] = float32(num)

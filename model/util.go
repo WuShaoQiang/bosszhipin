@@ -4,33 +4,58 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/pkg/errors"
+)
+
+var (
+	loopCounter = 0
+	// c           http.Client
 )
 
 // getNextPage return whether it has a next page,and the path of next page.
 // it also will store jobs in mysql
 func getNextPage(page string, keyword string) (bool, string) {
 	var nextPage string
-	currentURL := fmt.Sprintf(url, page)
-	log.Println("getting page ", currentURL)
-	resp, err := http.Get(currentURL)
-	if err != nil {
-		log.Fatalf("Get Error %s\n", err)
+	currentURL := fmt.Sprintf(indexURL, page)
+	fmt.Println("getting page ", currentURL)
+	// resp, err := http.Get(currentURL)
+	c, currentIP := getNewClient()
+	req := getNewGETRequest(currentURL)
+
+	resp, err := c.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
+		DeleteIP(currentIP)
+		if loopCounter > 20 {
+			logger.Debug("Made request more than twenty times, stopping the program")
+		}
+		loopCounter++
+		return getNextPage(page, keyword)
 	}
 
-	defer resp.Body.Close()
+	//reset loopCounter if store data successfully
+	loopCounter = 0
+
+	defer func() {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatalf("go query Error %s\n", err)
+		logger.Debugln("go query Error ", err)
 	}
 
 	storeJobs(doc, keyword)
-	log.Println("store data to mysql")
+
+	fmt.Println("store data to mysql")
 	if doc.Find("a[class=next]").Size() == 1 {
 		doc.Find("a[class=next]").Each(func(i int, s *goquery.Selection) {
 			nextPage = s.Get(i).Attr[0].Val + "&" + s.Get(i).Attr[1].Val
@@ -112,7 +137,7 @@ func storeJobs(doc *goquery.Document, keyword string) error {
 	doc.Find("ul>li>div.job-primary>div>h3>a").Each(func(i int, s *goquery.Selection) {
 		detail := s.Get(0).Attr[0].Val
 		jobs[i].Detail = detail
-		jobs[i].getDetailPage(detail)
+		go jobs[i].getDetailPage(detail)
 	})
 
 	//Find name
@@ -127,24 +152,33 @@ func storeJobs(doc *goquery.Document, keyword string) error {
 		}
 	}
 
-	// Add to allJobs
-	// allJobs = append(allJobs, jobs...)
-
 	return nil
 }
 
 // getDetailPage is for job's benefit and detailAddress
 func (job *Job) getDetailPage(page string) {
-	resp, err := http.Get(fmt.Sprintf(url, page))
-	if err != nil {
-		log.Fatalf("Get Error %s\n", err)
+	c, currentIP := getNewClient()
+	req := getNewGETRequest(fmt.Sprintf(indexURL, page))
+	resp, err := c.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
+		DeleteIP(currentIP)
+		if loopCounter > 20 {
+			logger.Debug("Made request more than twenty times, stopping the program")
+		}
+		loopCounter++
+		job.getDetailPage(page)
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatalf("go query Error %s\n", err)
+		logger.Debugln("go query Error ", err)
 	}
 
 	job.Benefit, job.DetailAddress = getDetailData(doc)
@@ -177,11 +211,11 @@ func isExist(nameItems []string, item string) bool {
 }
 
 func deleteTable(tableName string) error {
-	return db.DropTableIfExists(tableName).Error
+	return errors.Wrap(db.DropTableIfExists(tableName).Error, "deteleTable Error")
 }
 
 func createJobTable() error {
-	return db.CreateTable(&Job{}).Error
+	return errors.Wrap(db.CreateTable(&Job{}).Error, "createTable Error")
 }
 
 func keywordEncode(keywords []string) (urlsEncoded []string) {
@@ -209,4 +243,29 @@ func chineseEncode(chinese string) (encoded string) {
 		encoded = encoded + "%" + fmt.Sprintf("%x", singleByte)
 	}
 	return
+}
+
+func getNewClient() (http.Client, string) {
+	newIP := GetIP()
+	logger.Infoln("Using ", newIP, " to do request")
+	urli := url.URL{}
+	urlproxy, _ := urli.Parse("//" + newIP)
+	client := http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(urlproxy),
+		},
+	}
+	return client, newIP
+}
+
+func getNewGETRequest(currentURL string) *http.Request {
+	req, err := http.NewRequest("GET", currentURL, nil)
+	if err != nil {
+		logger.Debugln("Create Request Error : ", err)
+	}
+
+	req.Header.Set("User-Agent", GetUserAgent())
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	return req
 }

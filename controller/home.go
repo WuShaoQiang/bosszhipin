@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/WuShaoQiang/crawler/boss/model"
@@ -19,7 +20,7 @@ type router struct {
 }
 
 var (
-	path     = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/"
+	basePath = "/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss"
 	host     = "http://127.0.0.1:8080"
 	keywords []string
 
@@ -54,7 +55,7 @@ var (
 
 // Register register all handlers
 func Register() {
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(path+"static"))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(basePath+"/static")))))
 
 	http.HandleFunc("/", indexHandler)
 	// http.HandleFunc("/map", mapHandler)
@@ -80,7 +81,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		tmpl, err := template.ParseFiles("templates/contents/index.html")
 		if err != nil {
-			log.Fatalln("templateParseFiles Error:", err)
+			logger.Debug("templateParseFiles Error:", err)
 		}
 		tmpl.Execute(w, nil)
 	}

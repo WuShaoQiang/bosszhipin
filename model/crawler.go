@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"sync"
 )
 
@@ -25,7 +24,7 @@ func CrawlerGo(keywords []string, refresh bool) bool {
 		go crawlerGoSingleKeyword(keyword, urlsEncoded[index])
 	}
 	wg.Wait()
-	log.Println("Crawler finished!")
+	fmt.Println("Crawler finished!")
 	return true
 }
 
@@ -33,11 +32,11 @@ func crawlerGoSingleKeyword(keyword, urlEncoded string) {
 	defer wg.Done()
 	indexPage := "/c100010000/?query=%s&page=1&ka=page-1"
 	currentPage := fmt.Sprintf(indexPage, urlEncoded)
-	log.Printf("Collecting on %v\n", keyword)
+	fmt.Printf("Collecting on %v\n", keyword)
 	for {
 		next, nextPage := getNextPage(currentPage, keyword)
 		if !next {
-			log.Println("The end of ", keyword, " page")
+			fmt.Println("The end of ", keyword, " page")
 			break
 		} else {
 			currentPage = nextPage
@@ -48,22 +47,18 @@ func crawlerGoSingleKeyword(keyword, urlEncoded string) {
 func isKeywordExist(keyword string) bool {
 	var num int
 	if err := db.Model(&Job{}).Where("keyword = ?", keyword).Count(&num).Error; err != nil {
-		log.Fatalln("isKeywordExist Error : ", err)
+		logger.Debugln("isKeywordExist Error : ", err)
 	}
 	if num > 0 {
 		return true
 	}
-	if num < 0 {
-		log.Fatalln("num can't be negative")
-	}
-
 	return false
 }
 
 func deleteByKeyword(keyword string) {
-	log.Println("deleting ", keyword, " in database")
-	if err := db.Table("job").Delete(&Job{}, "keyword = ?", keyword); err != nil {
-		log.Fatalln("deleteByKeyword Error : ", err)
+	fmt.Println("deleting ", keyword, " in database")
+	if err := db.Delete(&Job{}, "keyword = ?", keyword); err != nil {
+		logger.Debugln("deleteByKeyword Error : ", err)
 	}
 }
 
