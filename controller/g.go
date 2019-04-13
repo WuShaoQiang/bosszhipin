@@ -24,9 +24,9 @@ func init() {
 
 func setLogger() {
 	pathMap := lfshook.PathMap{
-		logrus.DebugLevel: filepath.Join(basePath + "debug.log"),
-		logrus.InfoLevel:  filepath.Join(basePath + "info.log"),
-		logrus.WarnLevel:  filepath.Join(basePath + "warn.log"),
+		logrus.DebugLevel: filepath.Join(basePath + "/log/debug.log"),
+		logrus.InfoLevel:  filepath.Join(basePath + "/log/info.log"),
+		logrus.WarnLevel:  filepath.Join(basePath + "/log/warn.log"),
 	}
 	logger.Hooks.Add(lfshook.NewHook(
 		pathMap,

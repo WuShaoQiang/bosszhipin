@@ -32,8 +32,8 @@ func getNextPage(page string, keyword string) (bool, string) {
 	if err != nil || resp.StatusCode != 200 {
 		logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
 		DeleteIP(currentIP)
-		if loopCounter > 20 {
-			logger.Debug("Made request more than twenty times, stopping the program")
+		if loopCounter > 3 {
+			logger.Debug("Made request more than three times, stopping the program")
 		}
 		loopCounter++
 		return getNextPage(page, keyword)
@@ -163,8 +163,8 @@ func (job *Job) getDetailPage(page string) {
 	if err != nil || resp.StatusCode != 200 {
 		logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
 		DeleteIP(currentIP)
-		if loopCounter > 20 {
-			logger.Debug("Made request more than twenty times, stopping the program")
+		if loopCounter > 3 {
+			logger.Debug("Made request more than three times, stopping the program")
 		}
 		loopCounter++
 		job.getDetailPage(page)

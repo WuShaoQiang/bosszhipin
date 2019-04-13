@@ -1,6 +1,8 @@
 package model
 
 import (
+	"path/filepath"
+
 	"github.com/WuShaoQiang/crawler/boss/config"
 	"github.com/jinzhu/gorm"
 	"github.com/rifflock/lfshook"
@@ -20,9 +22,9 @@ func init() {
 
 func setLogger() {
 	pathMap := lfshook.PathMap{
-		logrus.DebugLevel: basePath + "debug.log",
-		logrus.InfoLevel:  basePath + "info.log",
-		logrus.WarnLevel:  basePath + "warn.log",
+		logrus.DebugLevel: filepath.Join(basePath + "/log/debug.log"),
+		logrus.InfoLevel:  filepath.Join(basePath + "/log/info.log"),
+		logrus.WarnLevel:  filepath.Join(basePath + "/log/warn.log"),
 	}
 	logger.Hooks.Add(lfshook.NewHook(
 		pathMap,
