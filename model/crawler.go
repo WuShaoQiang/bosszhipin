@@ -12,6 +12,7 @@ var (
 // CrawlerGo start crawler and store data in mysql
 // Before crawler start it will detele all old data
 func CrawlerGo(keywords []string, refresh bool) bool {
+	storeIPAddress()
 	urlsEncoded := keywordEncode(keywords)
 	for index, keyword := range keywords {
 		if isKeywordExist(keyword) {
@@ -33,15 +34,26 @@ func crawlerGoSingleKeyword(keyword, urlEncoded string) {
 	indexPage := "/c100010000/?query=%s&page=1&ka=page-1"
 	currentPage := fmt.Sprintf(indexPage, urlEncoded)
 	fmt.Printf("Collecting on %v\n", keyword)
-	for {
-		next, nextPage := getNextPage(currentPage, keyword)
-		if !next {
-			fmt.Println("The end of ", keyword, " page")
-			break
-		} else {
-			currentPage = nextPage
-		}
+	// for {
+	// 	next, nextPage := getNextPage(currentPage, keyword)
+	// 	if !next {
+	// 		fmt.Println("The end of ", keyword, " page")
+	// 		break
+	// 	} else {
+	// 		currentPage = nextPage
+	// 	}
+	// }
+	nextPageChannel := make(chan string, 1)
+	wg.Add(1)
+	getNextPage(currentPage, keyword, nextPageChannel)
+
+	for nextPage := range nextPageChannel {
+		fmt.Println(nextPage)
+		wg.Add(1)
+		go getNextPage(nextPage, keyword, nextPageChannel)
 	}
+
+	// 得到根路径，先把所有路径一并获得
 }
 
 func isKeywordExist(keyword string) bool {

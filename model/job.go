@@ -11,7 +11,7 @@ type Job struct {
 	City          string `gorm:"type:varchar(16)"`
 	District      string `gorm:"type:varchar(16)"`
 	DetailAddress string `gorm:"type:varchar(64)"`
-	Wrok          string `gorm:"type:varchar(8)"`
+	Work          string `gorm:"type:varchar(8)"`
 	Education     string `gorm:"type:varchar(16)"`
 	Detail        string `gorm:"type:varchar(64)"`
 	Benefit       string `gorm:"type:varchar(256)"`
@@ -19,7 +19,10 @@ type Job struct {
 
 var (
 	// allJobs     []Job
-	indexURL = "https://www.zhipin.com%s"
+	indexURL  = "https://www.zhipin.com%s"
+	work      = []string{"经验不限", "1-3", "3-5", "5-10"}
+	education = []string{"大专", "本科", "硕士"}
+	city      = []string{"北京", "上海", "广州", "深圳", "杭州", "西安", "武汉", "成都", "南京", "厦门"}
 )
 
 // AddJob add one job to database
@@ -29,46 +32,6 @@ func (job *Job) AddJob() error {
 	}
 	return nil
 }
-
-func clearAllData(tableName string) error {
-	if err := deleteTable(tableName); err != nil {
-		return err
-	}
-	if err := createJobTable(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// func BarData() (nameItems []string, cityCountMap map[string]map[string]int, cities []string) {
-// 	cityCountMap = map[string]map[string]int{}
-// 	countMap := make([]map[string]int, 0)
-// 	city2NumMap := map[string]int{}
-// 	counter := 0
-// 	for _, single := range allJobs {
-// 		if _, exist := cityCountMap[single.City]; !exist {
-// 			cities = append(cities, single.City)
-
-// 			city2NumMap[single.City] = counter
-// 			countMap = append(countMap, map[string]int{})
-// 			fmt.Println(counter)
-// 			cityCountMap[single.City] = countMap[counter]
-// 			counter++
-// 		} else {
-// 			if _, exist := countMap[city2NumMap[single.City]][strconv.Itoa(single.Salary)]; !exist {
-// 				countMap[city2NumMap[single.City]][strconv.Itoa(single.Salary)] = 1
-// 				if !isExist(nameItems, strconv.Itoa(single.Salary)) {
-// 					nameItems = append(nameItems, strconv.Itoa(single.Salary))
-// 				}
-// 			} else {
-// 				countMap[city2NumMap[single.City]][strconv.Itoa(single.Salary)]++
-// 			}
-// 		}
-
-// 	}
-
-// 	return
-// }
 
 // BarDataCityJobNum return how many jobs are there in each city
 func BarDataCityJobNum(keywords []string) (nameItems []string, count [][]int) {
@@ -108,12 +71,68 @@ func BarDataCityJobNum(keywords []string) (nameItems []string, count [][]int) {
 	return
 }
 
+func BarDataSalaryWork(keywords []string) (nameItems []string, count [][]int) {
+	nameItems = work
+	count = make([][]int, len(keywords))
+
+	for idx1, keyword := range keywords {
+		var jobs []Job
+		for _, nameItem := range nameItems {
+			db.Model(&Job{}).Where("keyword = ?", keyword).Where("work = ?", nameItem).Find(&jobs)
+			if count[idx1] == nil {
+				count[idx1] = make([]int, 0)
+			}
+			average := salaryAverage(jobs)
+			count[idx1] = append(count[idx1], average)
+		}
+	}
+	return
+}
+
+func BarDataSalaryEducation(keywords []string) (nameItems []string, count [][]int) {
+	nameItems = education
+	count = make([][]int, len(keywords))
+
+	for idx1, keyword := range keywords {
+		var jobs []Job
+		for _, nameItem := range nameItems {
+			db.Model(&Job{}).Where("keyword = ?", keyword).Where("education = ?", nameItem).Find(&jobs)
+			if count[idx1] == nil {
+				count[idx1] = make([]int, 0)
+			}
+			average := salaryAverage(jobs)
+			count[idx1] = append(count[idx1], average)
+		}
+	}
+	return
+}
+
+func BarDataSalaryCity(keywords []string) (nameItems []string, count [][]int) {
+	nameItems = city
+	count = make([][]int, len(keywords))
+
+	for idx1, keyword := range keywords {
+		var jobs []Job
+		for _, nameItem := range nameItems {
+			db.Model(&Job{}).Where("keyword = ?", keyword).Where("city = ?", nameItem).Find(&jobs)
+			if count[idx1] == nil {
+				count[idx1] = make([]int, 0)
+			}
+			average := salaryAverage(jobs)
+			count[idx1] = append(count[idx1], average)
+		}
+	}
+	return
+}
+
+/*-------------------------Map-------------------------------*/
+
 // MapDataProvinceJobNum return how many jobs are there in each province
-func MapDataProvinceJobNum() map[string]float32 {
+func MapDataProvinceJobNum(keyword string) map[string]float32 {
 	mapData := make(map[string]float32)
 	var num int
 	for city, province := range provinceMap {
-		err := db.Model(&Job{}).Where("city = ?", city).Count(&num).Error
+		err := db.Model(&Job{}).Where("city = ?", city).Where("keyword = ?", keyword).Count(&num).Error
 		if err != nil {
 			logger.Debugln("MapData Error : ", err)
 		} else {

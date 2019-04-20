@@ -16,31 +16,36 @@ import (
 var (
 	loopCounter = 0
 	// c           http.Client
+	usefulIPAddress string
 )
+
+func doRequest(url string) *http.Response {
+	c := getNewClient()
+	req := getNewGETRequest(url)
+	resp, err := c.Do(req)
+	if err != nil {
+		if resp != nil {
+			logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
+		} else {
+			logger.Warnf("Get Error %s\n Time : %v", err, loopCounter)
+		}
+		loadUsefulIPAddress()
+		return doRequest(url)
+	}
+	return resp
+}
 
 // getNextPage return whether it has a next page,and the path of next page.
 // it also will store jobs in mysql
-func getNextPage(page string, keyword string) (bool, string) {
+func getNextPage(page string, keyword string, pageChannel chan string) {
+	defer wg.Done()
 	var nextPage string
 	currentURL := fmt.Sprintf(indexURL, page)
-	fmt.Println("getting page ", currentURL)
-	// resp, err := http.Get(currentURL)
-	c, currentIP := getNewClient()
-	req := getNewGETRequest(currentURL)
+	logger.Infoln("getting page ", currentURL)
+	loadUsefulIPAddress()
+	resp := doRequest(currentURL)
 
-	resp, err := c.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
-		DeleteIP(currentIP)
-		if loopCounter > 3 {
-			logger.Debug("Made request more than three times, stopping the program")
-		}
-		loopCounter++
-		return getNextPage(page, keyword)
-	}
-
-	//reset loopCounter if store data successfully
-	loopCounter = 0
+	logger.Infoln("Get response")
 
 	defer func() {
 		if resp.Body != nil {
@@ -48,21 +53,25 @@ func getNextPage(page string, keyword string) (bool, string) {
 		}
 	}()
 
+	//犯过一个错误，把Client的超时设置为10秒，doc在读取Body的时候刚好超时了，导致发生错误
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		logger.Debugln("go query Error ", err)
+		logger.Infoln(resp.StatusCode, err)
+		panic("go query Error ")
 	}
 
-	storeJobs(doc, keyword)
-
-	fmt.Println("store data to mysql")
 	if doc.Find("a[class=next]").Size() == 1 {
 		doc.Find("a[class=next]").Each(func(i int, s *goquery.Selection) {
 			nextPage = s.Get(i).Attr[0].Val + "&" + s.Get(i).Attr[1].Val
 		})
-		return true, nextPage
+		logger.Infoln("find another page, pass it to channel")
+		pageChannel <- nextPage
+	} else {
+		close(pageChannel)
 	}
-	return false, ""
+
+	storeJobs(doc, keyword)
+	fmt.Println("store data to mysql")
 }
 
 func storeJobs(doc *goquery.Document, keyword string) error {
@@ -98,9 +107,9 @@ func storeJobs(doc *goquery.Document, keyword string) error {
 		if len(work) > 1 {
 			log.Println("workExperience too long")
 		} else if len(work) == 1 {
-			jobs[i].Wrok = work[0]
+			jobs[i].Work = work[0]
 		} else {
-			jobs[i].Wrok = "经验不限"
+			jobs[i].Work = "经验不限"
 		}
 
 		education := string(r[len(r)-2 : len(r)])
@@ -137,6 +146,7 @@ func storeJobs(doc *goquery.Document, keyword string) error {
 	doc.Find("ul>li>div.job-primary>div>h3>a").Each(func(i int, s *goquery.Selection) {
 		detail := s.Get(0).Attr[0].Val
 		jobs[i].Detail = detail
+		wg.Add(1)
 		go jobs[i].getDetailPage(detail)
 	})
 
@@ -157,18 +167,9 @@ func storeJobs(doc *goquery.Document, keyword string) error {
 
 // getDetailPage is for job's benefit and detailAddress
 func (job *Job) getDetailPage(page string) {
-	c, currentIP := getNewClient()
-	req := getNewGETRequest(fmt.Sprintf(indexURL, page))
-	resp, err := c.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		logger.Warnf("Get Error %s\n Code : %v\n Time : %v", err, resp.StatusCode, loopCounter)
-		DeleteIP(currentIP)
-		if loopCounter > 3 {
-			logger.Debug("Made request more than three times, stopping the program")
-		}
-		loopCounter++
-		job.getDetailPage(page)
-	}
+	defer wg.Done()
+	resp := doRequest(fmt.Sprintf(indexURL, page))
+	loopCounter = 0
 
 	defer func() {
 		if resp.Body != nil {
@@ -245,17 +246,34 @@ func chineseEncode(chinese string) (encoded string) {
 	return
 }
 
-func getNewClient() (http.Client, string) {
-	newIP := GetIP()
-	logger.Infoln("Using ", newIP, " to do request")
+func loadUsefulIPAddress() {
+	for {
+		if getProxyIPAddress() {
+			break
+		}
+	}
+}
+
+func getProxyIPAddress() bool {
+	ip := GetIP()
+	if ip == "" {
+		return false
+	}
+	usefulIPAddress = ip
+	return true
+}
+
+func getNewClient() *http.Client {
+	logger.Infoln("Using ", usefulIPAddress, " to do request")
 	urli := url.URL{}
-	urlproxy, _ := urli.Parse("//" + newIP)
-	client := http.Client{
+	urlproxy, _ := urli.Parse("http://" + usefulIPAddress)
+	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyURL(urlproxy),
 		},
+		// Timeout: 10 * time.Second,
 	}
-	return client, newIP
+	return client
 }
 
 func getNewGETRequest(currentURL string) *http.Request {
@@ -267,5 +285,29 @@ func getNewGETRequest(currentURL string) *http.Request {
 	req.Header.Set("User-Agent", GetUserAgent())
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Encoding", "identity")
+
 	return req
+}
+
+func salaryAverage(jobs []Job) int {
+	n := len(jobs)
+	if n == 0 {
+		return 0
+	}
+	total := 0
+	for _, job := range jobs {
+		total += job.Salary
+	}
+	return (total / n)
+}
+
+func clearAllData(tableName string) error {
+	if err := deleteTable(tableName); err != nil {
+		return err
+	}
+	if err := createJobTable(); err != nil {
+		return err
+	}
+	return nil
 }

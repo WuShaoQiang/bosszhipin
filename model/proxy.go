@@ -2,6 +2,9 @@ package model
 
 import (
 	"math/rand"
+	"net/http"
+	"net/url"
+	"time"
 )
 
 var uas = [...]string{
@@ -20,8 +23,10 @@ var uas = [...]string{
 	"Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko",
 }
 
+var ipAddress []string
+
 // Proxy stores the proxy filtered from CrudeProxy
-type Proxy struct {
+type proxy struct {
 	// ID is the ID value of the current record, which is unique among all proxies.
 	ID int64 `gorm:"AUTO_INCREMENT;" json:"id"`
 	// IP is the IP address of the proxy. e.g 127.0.0.1
@@ -52,23 +57,58 @@ type Proxy struct {
 	UpdateTime int64 `json:"update_time"`
 }
 
-//GetIP return IP:Port randomly
-func GetIP() (addr string) {
-	// addr = ""
-	rows, err := db.Table("proxy").Where("score > ?", 5).Select("content").Rows()
+func loadIP() (addrs []string) {
+	var addr string
+	rows, err := db.Table("proxy").Select("content").Where("score > 1").Rows()
 	if err != nil {
 		logger.Debugln("GetIP Error : ", err)
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		rows.Scan(&addr)
+		addrs = append(addrs, addr)
 	}
 	return
 }
 
+//storeIPAddress store useful ip address to a slice
+func storeIPAddress() {
+	// addr = ""
+	urli := url.URL{}
+	addrs := loadIP()
+	for _, addr := range addrs {
+		urlproxy, _ := urli.Parse("//" + addr)
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyURL(urlproxy),
+			},
+			Timeout: 2 * time.Second,
+		}
+		// net.Dial()
+		resp, err := client.Head("https://www.zhipin.com")
+		if err != nil || resp == nil {
+			DeleteIP(addr)
+		} else if resp.StatusCode == 200 {
+			ipAddress = append(ipAddress, addr)
+		}
+	}
+	logger.Infoln("storeIPAddress finished")
+}
+
+func GetIP() string {
+	if len(ipAddress) == 0 {
+		return ""
+	}
+
+	random := rand.Int()
+	idx := random % len(ipAddress)
+	return ipAddress[idx]
+}
+
 // DeleteIP delete ip in mysql
 func DeleteIP(addr string) {
-	err := db.Table("proxy").Where("content=?", addr).Delete(&Proxy{}).Error
+	err := db.Table("proxy").Where("content=?", addr).Delete(&proxy{}).Error
 	if err != nil {
 		logger.Debugln("DeleteIP Error : ", err)
 	}

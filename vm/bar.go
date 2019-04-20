@@ -36,7 +36,48 @@ var (
 func BarCityJobNum(keywords []string) *charts.Bar {
 	nameItems, count := model.BarDataCityJobNum(keywords)
 	bar := charts.NewBar()
-	bar.SetGlobalOptions(charts.TitleOpts{Title: "城市分布"}, charts.ToolboxOpts{Show: true})
+	bar.SetGlobalOptions(
+		charts.TitleOpts{Title: "城市分布"},
+		charts.ToolboxOpts{Show: true})
+	bar = bar.AddXAxis(nameItems)
+	for index, keyword := range keywords {
+		bar.AddYAxis(keyword, count[index])
+	}
+	return bar
+}
+
+func BarSalaryWork(keywords []string) *charts.Bar {
+	nameItems, count := model.BarDataSalaryWork(keywords)
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.TitleOpts{Title: "薪资--工作经验"},
+		charts.ToolboxOpts{Show: true})
+	bar = bar.AddXAxis(nameItems)
+	for index, keyword := range keywords {
+		bar.AddYAxis(keyword, count[index])
+	}
+	return bar
+}
+
+func BarSalaryEducation(keywords []string) *charts.Bar {
+	nameItems, count := model.BarDataSalaryEducation(keywords)
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.TitleOpts{Title: "薪资--教育水平"},
+		charts.ToolboxOpts{Show: true})
+	bar = bar.AddXAxis(nameItems)
+	for index, keyword := range keywords {
+		bar.AddYAxis(keyword, count[index])
+	}
+	return bar
+}
+
+func BarSalaryCity(keywords []string) *charts.Bar {
+	nameItems, count := model.BarDataSalaryCity(keywords)
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.TitleOpts{Title: "薪资--主要城市"},
+		charts.ToolboxOpts{Show: true})
 	bar = bar.AddXAxis(nameItems)
 	for index, keyword := range keywords {
 		bar.AddYAxis(keyword, count[index])

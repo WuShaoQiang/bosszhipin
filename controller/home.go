@@ -58,7 +58,7 @@ func Register() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(basePath+"/static")))))
 
 	http.HandleFunc("/", indexHandler)
-	// http.HandleFunc("/map", mapHandler)
+	http.HandleFunc("/map", mapHandler)
 	http.HandleFunc("/bar", barHandler)
 }
 
@@ -66,16 +66,6 @@ func Register() {
 func StartUp() {
 	http.ListenAndServe(addr, nil)
 }
-
-// func staticHandler() http.Handler {
-// 	dir, err := os.Open("/home/shelljo/go/src/github.com/WuShaoQiang/crawler/boss/static")
-// 	if err != nil {
-// 		log.Fatalln("staticHandler Open File Error : ", err)
-// 	}
-
-// 	http.FileServer(dir)
-
-// }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
@@ -96,26 +86,30 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func mapHandler(w http.ResponseWriter, r *http.Request) {
-// 	tpName := "map.html"
-// 	if r.Method == http.MethodGet {
-// 		templates[tpName].Execute(w, nil)
-// 	}
-// 	if r.Method == http.MethodPost {
-// 		page := charts.NewPage(orderRouters("map")...)
-// 		page.Add(
-// 			vm.MapVisualMap(model.MapDataProvinceJobNum()),
-// 		)
-// 		page.Render(w)
-// 	}
+func mapHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		logger.Infof("map : %v", keywords)
+		page := charts.NewPage(orderRouters("map")...)
+		for _, keyword := range keywords {
+			page.Add(
+				vm.MapVisualMap(keyword),
+			)
+		}
 
-// }
+		page.Render(w)
+	}
+
+}
 
 func barHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		logger.Infof("bar : %v", keywords)
 		page := charts.NewPage(orderRouters("bar")...)
 		page.Add(
 			vm.BarCityJobNum(keywords),
+			vm.BarSalaryWork(keywords),
+			vm.BarSalaryEducation(keywords),
+			vm.BarSalaryCity(keywords),
 		)
 		page.Render(w)
 	}
