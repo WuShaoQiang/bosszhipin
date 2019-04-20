@@ -27,4 +27,4 @@
 
 ## Demo
 
-![城市分布柱状图](https://github.com/WuShaoQiang/bosszhipin/doc/demo.png)
+![城市分布柱状图](doc/demo.png)
